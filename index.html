@@ -1,252 +1,186 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Danh sách Deal Livestream</title>
-  <link rel="icon" href="https://dannygreen.vn/wp-content/uploads/2024/08/DannyGreen-favicon.png" sizes="32x32">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root { --brand:#071949; --accent:#FFB41D; }
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans"; }
-    /* NOTE: Không dùng @apply để tránh lỗi khi không có build Tailwind */
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:.5rem .75rem;border:1px solid #cbd5e1;border-radius:.75rem;font-weight:600;font-size:.875rem;background:#fff}
-    .btn-primary{background:var(--brand);color:#fff;border-color:transparent}
-    .field{width:100%;border:1px solid #cbd5e1;border-radius:.75rem;padding:.5rem .75rem;font-size:.875rem}
-    .pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:9999px;padding:.25rem .625rem;background:#f1f5f9;color:#334155}
-    .grid-items{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1rem}
-    @media(min-width:640px){.grid-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(min-width:1024px){.grid-items{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media print { .no-print { display:none !important; } body { background:white; } .card { box-shadow:none; border:1px solid #ddd; } }
-  </style>
-</head>
-<body class="bg-slate-50 text-slate-900">
-  <div class="max-w-7xl mx-auto p-4 md:p-6">
-    <!-- Header / Taskbar Top -->
-    <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <img src="https://dannygreen.vn/wp-content/uploads/2024/11/Logo-DannyGreen-R-07.webp" alt="DannyGreen" class="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1"/>
-        <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold">Danh sách Deal Livestream</h1>
-          <p class="text-sm text-slate-500">Nguồn dữ liệu đọc từ <span class="font-semibold">deals.xlsx</span> đặt cùng thư mục với file này.</p>
-        </div>
-      </div>
-      <div class="no-print flex flex-wrap items-center gap-2">
-        <input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…" />
-      </div>
-    </header>
+<script>
+// ---- Config ----
+const SECTION_DEFS = [
+  { key: 'mua2tang1', label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"', sheet: 'MUA2TANG1' },
+  { key: 'mua1tang1', label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"', sheet: 'MUA1TANG1' },
+  { key: 'trungthu',  label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU', sheet: 'TRUNGTHU' },
+  { key: 'giam50nuocep', label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
+  { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ', sheet: 'HANG_TUOI_HUU_CO' },
+];
 
-    <!-- Mục lớn (đọc từ sheet CONFIG, ô B2 nếu có) -->
-    <section class="card p-4 md:p-6 mb-6">
-      <div class="flex flex-col md:flex-row md:items-center gap-3">
-        <label class="text-sm font-semibold shrink-0">Mục lớn (Điền text từ Excel):</label>
-        <input id="bigTitle" class="field" placeholder="Ví dụ: CHIẾN DỊCH 9.9 – ƯU ĐÃI TOÀN SÀN" disabled />
-      </div>
-      <p class="mt-2 text-xs text-slate-500">* File Excel <span class="font-semibold">deals.xlsx</span> phải đặt cùng thư mục và được host cùng origin với trang này (VD: GitHub Pages/Vercel/public). Tự động tải khi mở trang.</p>
-    </section>
+const CANDIDATE_PATHS = [ '/deals.xlsx', './deals.xlsx', 'deals.xlsx' ];
 
-    <!-- Sections container -->
-    <div id="status" class="card p-4 md:p-6 mb-6 hidden"></div>
-    <div id="sections" class="space-y-6"></div>
+// ---- State ----
+var state = {
+  bigTitle: '',
+  sections: (function(){ var o={}; SECTION_DEFS.forEach(function(d){o[d.key]=[]}); return o; })()
+};
 
-    <footer class="mt-10 text-xs text-slate-500">
-      Made for DannyGreen & Nhân Hòa • v2.1 (Excel-driven)
-    </footer>
-  </div>
+// ---- Utils ----
+function formatVND(n){
+  if (n === '' || n === null || n === undefined || isNaN(Number(n))) return '';
+  try { return Number(n).toLocaleString('vi-VN') + '₫'; } catch(e) { return n; }
+}
 
-  <template id="sectionTemplate">
-    <section class="card p-4 md:p-6">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <span class="pill"></span>
-          <h2 class="text-xl font-bold"></h2>
-        </div>
-        <span class="text-xs text-slate-500">(đọc từ Excel)</span>
-      </div>
-      <div class="grid-items itemsWrap"></div>
-    </section>
-  </template>
-
-  <template id="itemCardTemplate">
-    <article class="relative card overflow-hidden">
-      <div class="aspect-[4/3] bg-slate-100 relative">
-        <img class="w-full h-full object-cover previewImg absolute inset-0" alt="preview" />
-      </div>
-      <div class="p-3 space-y-1.5">
-        <div class="text-sm font-semibold nameText truncate"></div>
-        <div class="text-[13px] text-slate-600 promoText"></div>
-        <div class="text-base font-bold priceText"></div>
-      </div>
-    </article>
-  </template>
-
-  <script>
-    // ---- Config ----
-    const SECTION_DEFS = [
-      { key: 'mua2tang1', label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"', sheet: 'MUA2TANG1' },
-      { key: 'mua1tang1', label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"', sheet: 'MUA1TANG1' },
-      { key: 'trungthu',  label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU', sheet: 'TRUNGTHU' },
-      { key: 'giam50nuocep', label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
-      { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ', sheet: 'HANG_TUOI_HUU_CO' },
-    ];
-
-    const CANDIDATE_PATHS = [ '/deals.xlsx', './deals.xlsx', 'deals.xlsx' ];
-
-    // ---- State (không LocalStorage) ----
-    let state = {
-      bigTitle: '',
-      sections: Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]))
-    };
-
-    // ---- Utils ----
-    const formatVND = (n) => {
-      if (n === '' || n === null || n === undefined || isNaN(Number(n))) return '';
-      try { return Number(n).toLocaleString('vi-VN') + '₫'; } catch { return n; }
-    };
-
-    function normalizeRow(row) {
-      const get = (aliases) => {
-        for (const a of aliases) {
-          for (const k of Object.keys(row)) {
-            if ((k||'').toString().trim().toLowerCase() === a) return row[k];
-          }
+function normalizeRow(row){
+  function get(aliases){
+    for (var i=0;i<aliases.length;i++){
+      var a = aliases[i];
+      for (var k in row){
+        if (Object.prototype.hasOwnProperty.call(row,k)){
+          var kk = (k||'').toString().trim().toLowerCase();
+          if (kk === a) return row[k];
         }
-        return '';
-      };
-      return {
-        image: get(['hình ảnh','hinh anh','image','img','url','hình']),
-        name: get(['tên sản phẩm','ten san pham','name','product','sản phẩm']),
-        price: get(['giá bán cuối','gia ban cuoi','price','giá','gia']),
-        promo: get(['khuyến mãi','khuyen mai','promo','promotion','deal']),
-      };
-    }
-
-    // ---- Render ----
-    const sectionsEl = document.getElementById('sections');
-    const sectionTpl = document.getElementById('sectionTemplate');
-    const itemTpl = document.getElementById('itemCardTemplate');
-
-    function render() {
-      sectionsEl.innerHTML = '';
-      SECTION_DEFS.forEach((def, idx) => {
-        const node = sectionTpl.content.cloneNode(true);
-        const sec = node.querySelector('section');
-        sec.dataset.key = def.key;
-        sec.querySelector('h2').textContent = def.label;
-        sec.querySelector('.pill').textContent = `Mục ${idx + 1}`;
-        const wrap = sec.querySelector('.itemsWrap');
-        const items = (state.sections[def.key] || []);
-        items.forEach((it) => {
-          const card = itemTpl.content.cloneNode(true);
-          const el = card.querySelector('article');
-          el.dataset.id = it.id || (Math.random().toString(36).slice(2));
-          const img = card.querySelector('.previewImg');
-          const nm = card.querySelector('.nameText');
-          const pr = card.querySelector('.priceText');
-          const pm = card.querySelector('.promoText');
-          if (it.image) { img.src = it.image; img.alt = it.name || 'Ảnh'; } else { img.remove(); }
-          nm.textContent = it.name || '';
-          pm.textContent = it.promo || '';
-          pr.textContent = formatVND(it.price);
-          wrap.appendChild(card);
-        });
-        sectionsEl.appendChild(node);
-      });
-      document.getElementById('bigTitle').value = state.bigTitle || '';
-    }
-
-    // ---- Excel Loader ----
-    async function loadFromUrlOnce(path) {
-      const url = path + (path.includes('?') ? '' : `?t=${Date.now()}`);
-      console.log('[fetch] trying:', url);
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status + ' at ' + path);
-      const buf = await res.arrayBuffer();
-      const wb = XLSX.read(buf, { type: 'array' });
-      console.log('[fetch] success:', path, 'sheets:', wb.SheetNames);
-      applyWorkbook(wb);
-    }
-
-    async function loadFromCandidates() {
-      let lastErr = null;
-      for (const p of CANDIDATE_PATHS) {
-        try { await loadFromUrlOnce(p); return; }
-        catch (e) { lastErr = e; }
       }
-      showError("Không tìm thấy 'deals.xlsx'.
-• Nếu deploy trên Vercel/Next.js: đặt file vào thư mục PUBLIC và truy cập qua /deals.xlsx.
-• Nếu static (Other): vẫn nên đặt vào /public.
-• Kiểm tra trực tiếp URL: /deals.xlsx
-Chi tiết: " + (lastErr && lastErr.message ? lastErr.message : ''));
     }
+    return '';
+  }
+  return {
+    image: get(['hình ảnh','hinh anh','image','img','url','hình']),
+    name:  get(['tên sản phẩm','ten san pham','name','product','sản phẩm']),
+    price: get(['giá bán cuối','gia ban cuoi','price','giá','gia']),
+    promo: get(['khuyến mãi','khuyen mai','promo','promotion','deal'])
+  };
+}
 
-    function applyWorkbook(wb) {
-      const statusEl = document.getElementById('status');
-      let logs = [];
+// ---- Render ----
+var sectionsEl = document.getElementById('sections');
+var sectionTpl = document.getElementById('sectionTemplate');
+var itemTpl = document.getElementById('itemCardTemplate');
 
-      const cfg = wb.Sheets['CONFIG'];
-      if (cfg) {
-        const data = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
-        for (const row of data) {
-          if ((row[0]||'').toString().trim().toUpperCase() === 'BIG_TITLE') { state.bigTitle = row[1] || ''; break; }
-        }
-        logs.push('CONFIG ✓');
-      } else {
-        logs.push('CONFIG ✗ (không có)');
-      }
-      state.sections = Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]));
-      SECTION_DEFS.forEach(def => {
-        const sh = wb.Sheets[def.sheet];
-        if (!sh) { logs.push(def.sheet + ' ✗ (không có)'); return; }
-        const rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
-        const items = rows.map(r => normalizeRow(r)).filter(x => x.name || x.image || x.promo || x.price);
-        state.sections[def.key] = items;
-        logs.push(def.sheet + ` ✓ (${items.length} dòng)`);
-      });
-      render();
-      // show status
-      statusEl.classList.remove('hidden');
-      statusEl.innerHTML = `<div class="text-sm"><b>Trạng thái nạp Excel</b>: ${logs.join(' • ')}</div>`;
-    }
+function render(){
+  sectionsEl.innerHTML = '';
+  SECTION_DEFS.forEach(function(def, idx){
+    var node = sectionTpl.content.cloneNode(true);
+    var sec = node.querySelector('section');
+    sec.setAttribute('data-key', def.key);
+    sec.querySelector('h2').textContent = def.label;
+    sec.querySelector('.pill').textContent = 'Mục ' + (idx + 1);
+    var wrap = sec.querySelector('.itemsWrap');
 
-    // ---- Search (highlight) ----
-    function doSearch(q) {
-      const kw = (q||'').trim().toLowerCase();
-      const allCards = document.querySelectorAll('.itemsWrap article');
-      allCards.forEach(c => c.classList.remove('ring-2','ring-[color:var(--accent)]'));
-      if (!kw) return;
-      SECTION_DEFS.forEach(def => {
-        (state.sections[def.key] || []).forEach(it => {
-          const hit = (it.name||'').toLowerCase().includes(kw) || (it.promo||'').toLowerCase().includes(kw);
-          if (hit) {
-            const card = document.querySelector(`section[data-key="${def.key}"] article[data-id]`);
-            if (card) card.classList.add('ring-2','ring-[color:var(--accent)]');
-          }
-        });
-      });
-    }
+    var items = state.sections[def.key] || [];
+    items.forEach(function(it){
+      var card = itemTpl.content.cloneNode(true);
+      var el = card.querySelector('article');
+      el.setAttribute('data-id', it.id || Math.random().toString(36).slice(2));
+      var img = card.querySelector('.previewImg');
+      var nm  = card.querySelector('.nameText');
+      var pr  = card.querySelector('.priceText');
+      var pm  = card.querySelector('.promoText');
 
-    // ---- Events ----
-    document.getElementById('searchInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doSearch(e.target.value || '');
+      if (it.image) { img.src = it.image; img.alt = it.name || 'Ảnh'; } else { img.parentNode.removeChild(img); }
+      nm.textContent = it.name || '';
+      pm.textContent = it.promo || '';
+      pr.textContent = formatVND(it.price);
+      wrap.appendChild(card);
     });
 
-    // ---- Init ----
-    render();
-    loadFromCandidates();
+    sectionsEl.appendChild(node);
+  });
 
-    function showError(msg) {
-      const box = document.createElement('div');
-      box.className = 'card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';
-      box.innerHTML = `<div class="font-semibold mb-1">Lỗi tải Excel</div><pre class="text-sm whitespace-pre-wrap">${msg}</pre>`;
-      document.querySelector('.max-w-7xl').prepend(box);
-      console.warn(msg);
+  var bt = document.getElementById('bigTitle');
+  if (bt) bt.value = state.bigTitle || '';
+}
+
+// ---- Excel Loader ----
+async function loadFromUrlOnce(path){
+  var url = path + (path.indexOf('?')>=0 ? '' : ('?t=' + Date.now()));
+  console.log('[fetch] trying:', url);
+  var res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' at ' + path);
+  var buf = await res.arrayBuffer();
+  var wb = XLSX.read(buf, { type: 'array' });
+  console.log('[fetch] success:', path, 'sheets:', wb.SheetNames);
+  applyWorkbook(wb);
+}
+
+async function loadFromCandidates(){
+  var lastErr = null;
+  for (var i=0;i<CANDIDATE_PATHS.length;i++){
+    var p = CANDIDATE_PATHS[i];
+    try { await loadFromUrlOnce(p); return; }
+    catch(e){ lastErr = e; }
+  }
+  showError(
+    "Không tìm thấy 'deals.xlsx'.\n" +
+    "• Deploy Vercel: đặt file vào thư mục PUBLIC và truy cập qua /deals.xlsx.\n" +
+    "• Kiểm tra trực tiếp URL: /deals.xlsx\n" +
+    "Chi tiết: " + (lastErr && lastErr.message ? lastErr.message : '')
+  );
+}
+
+function applyWorkbook(wb){
+  var statusEl = document.getElementById('status');
+  var logs = [];
+
+  var cfg = wb.Sheets['CONFIG'];
+  if (cfg){
+    var data = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
+    for (var i=0;i<data.length;i++){
+      var row = data[i];
+      var k = (row[0]||'').toString().trim().toUpperCase();
+      if (k === 'BIG_TITLE'){ state.bigTitle = row[1] || ''; break; }
     }
-  </script>
-</body>
-</html>
+    logs.push('CONFIG ✓');
+  } else {
+    logs.push('CONFIG ✗ (không có)');
+  }
+
+  // clear
+  state.sections = (function(){ var o={}; SECTION_DEFS.forEach(function(d){o[d.key]=[]}); return o; })();
+
+  SECTION_DEFS.forEach(function(def){
+    var sh = wb.Sheets[def.sheet];
+    if (!sh){ logs.push(def.sheet + ' ✗ (không có)'); return; }
+    var rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
+    var items = rows.map(function(r){ return normalizeRow(r); })
+                   .filter(function(x){ return x.name || x.image || x.promo || x.price; });
+    state.sections[def.key] = items;
+    logs.push(def.sheet + ' ✓ (' + items.length + ' dòng)');
+  });
+
+  render();
+
+  if (statusEl){
+    statusEl.classList.remove('hidden');
+    statusEl.innerHTML =
+      '<div class="text-sm"><b>Trạng thái nạp Excel</b>: ' + logs.join(' • ') + '</div>';
+  }
+}
+
+// ---- Search ----
+function doSearch(q){
+  var kw = (q||'').trim().toLowerCase();
+  var allCards = document.querySelectorAll('.itemsWrap article');
+  allCards.forEach(function(c){ c.classList.remove('ring-2','ring-[color:var(--accent)]'); });
+  if (!kw) return;
+  SECTION_DEFS.forEach(function(def){
+    (state.sections[def.key] || []).forEach(function(it){
+      var hit = (it.name||'').toLowerCase().includes(kw) || (it.promo||'').toLowerCase().includes(kw);
+      if (hit){
+        var card = document.querySelector('section[data-key="'+def.key+'"] article[data-id]');
+        if (card) card.classList.add('ring-2','ring-[color:var(--accent)]');
+      }
+    });
+  });
+}
+
+// ---- Events ----
+document.getElementById('searchInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') doSearch(e.target.value || '');
+});
+
+// ---- Init ----
+render();
+loadFromCandidates();
+
+function showError(msg){
+  var box = document.createElement('div');
+  box.className = 'card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';
+  box.innerHTML = '<div class="font-semibold mb-1">Lỗi tải Excel</div>' +
+                  '<pre class="text-sm whitespace-pre-wrap">' + (msg||'') + '</pre>';
+  var root = document.querySelector('.max-w-7xl');
+  if (root) root.prepend(box);
+  console.warn(msg);
+}
+</script>
