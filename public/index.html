@@ -51,6 +51,7 @@
     </section>
 
     <!-- Sections container -->
+    <div id="status" class="card p-4 md:p-6 mb-6 hidden"></div>
     <div id="sections" class="space-y-6"></div>
 
     <footer class="mt-10 text-xs text-slate-500">
@@ -185,22 +186,32 @@ Chi tiết: " + (lastErr && lastErr.message ? lastErr.message : ''));
     }
 
     function applyWorkbook(wb) {
+      const statusEl = document.getElementById('status');
+      let logs = [];
+
       const cfg = wb.Sheets['CONFIG'];
       if (cfg) {
         const data = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
         for (const row of data) {
           if ((row[0]||'').toString().trim().toUpperCase() === 'BIG_TITLE') { state.bigTitle = row[1] || ''; break; }
         }
+        logs.push('CONFIG ✓');
+      } else {
+        logs.push('CONFIG ✗ (không có)');
       }
       state.sections = Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]));
       SECTION_DEFS.forEach(def => {
         const sh = wb.Sheets[def.sheet];
-        if (!sh) return;
+        if (!sh) { logs.push(def.sheet + ' ✗ (không có)'); return; }
         const rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
         const items = rows.map(r => normalizeRow(r)).filter(x => x.name || x.image || x.promo || x.price);
         state.sections[def.key] = items;
+        logs.push(def.sheet + ` ✓ (${items.length} dòng)`);
       });
       render();
+      // show status
+      statusEl.classList.remove('hidden');
+      statusEl.innerHTML = `<div class="text-sm"><b>Trạng thái nạp Excel</b>: ${logs.join(' • ')}</div>`;
     }
 
     // ---- Search (highlight) ----
