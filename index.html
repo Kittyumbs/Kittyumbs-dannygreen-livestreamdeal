@@ -2,250 +2,258 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Danh sách Deal Livestream</title>
-  <meta name="color-scheme" content="light" />
   <link rel="icon" href="https://dannygreen.vn/wp-content/uploads/2024/08/DannyGreen-favicon.png" sizes="32x32">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --dg-dark:#004527; /* primary */
-      --dg-main:#106E3F; /* secondary */
-      --dg-accent:#6DB743; /* accent */
-      --dg-white:#FFFFFF;
-      --radius:14px;
-    }
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans",sans-serif; background:#f7faf7; color:#0e0e11}
-
-    /* Header */
-    .app-header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,var(--dg-dark),var(--dg-main));color:var(--dg-white);padding:14px 16px 12px;border-bottom:3px solid var(--dg-accent)}
-    .app-title{font-size:16px;font-weight:700;line-height:1.3;margin:0;display:flex;align-items:center;gap:8px}
-    .calendar-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);padding:6px 10px;border-radius:999px;font-size:12px}
-    .calendar-pill svg{width:14px;height:14px;flex:0 0 14px}
-
-    /* Table container (mobile-first horizontal scroll) */
-    .table-wrap{padding:12px 12px 72px}
-    .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff;border:1px solid #e6efe6;border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.05)}
-    table{border-collapse:separate;border-spacing:0;min-width:900px;width:100%}
-    thead th{position:sticky;top:0;background:#eaf6ea;color:#053; text-align:left;font-size:12px;font-weight:700;padding:10px;border-bottom:1px solid #dbead9;z-index:1}
-    tbody td{font-size:13px;padding:10px;border-bottom:1px solid #f0f4f0;vertical-align:middle;background:#fff}
-
-    /* Sticky first column (image) */
-    thead th:first-child{position:sticky;left:0;z-index:3}
-    tbody td:first-child{position:sticky;left:0;z-index:2;background:#fff}
-
-    /* First column: image */
-    .img-cell{width:74px}
-    .img-64{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid #e5efe5;background:#f6fff6;cursor:pointer}
-
-    /* Name cell clickable */
-    .name-link{color:#0a4; text-decoration:none; font-weight:600}
-    .name-link:focus-visible{outline:2px solid var(--dg-accent);outline-offset:2px;border-radius:6px}
-
-    .badge-sale{background:#e9f8ec;color:#0a4;border:1px solid #bfe8c8;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
-    .price-green{color:#c40001;font-weight:700}
-    .text-red{color:#c40001;font-weight:700}
-    .tag{display:inline-block;background:#f2fbf2;border:1px dashed #bfe8c8;color:#074;padding:4px 8px;border-radius:10px;font-size:12px}
-
-    /* Footer */
-    footer{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e6efe6;padding:10px 12px;font-size:12px;color:#355}
-
-    /* Modal (bottom sheet style) */
-    .modal{position:fixed;inset:0;display:none}
-    .modal[open]{display:block}
-    .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
-    .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;padding:16px 14px 20px;box-shadow:0 -10px 30px rgba(0,0,0,.2)}
-    .sheet-title{margin:0 0 8px;font-size:15px;font-weight:750;color:#053}
-    .btn-row{display:flex;gap:10px}
-    .btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;border:1px solid #dbead9;background:#f8fff8;font-weight:700;font-size:14px;color:#064; text-decoration:none}
-    .btn:hover{background:#eaf6ea}
-    .btn svg{width:18px;height:18px}
-    .btn-primary{background:var(--dg-accent);color:#053;border-color:#9bd48f}
-    .btn-primary:hover{filter:brightness(0.98)}
-    .close{display:block;margin:10px auto 0;background:transparent;border:none;color:#355;font-size:13px}
-
-    .num{white-space:nowrap}
-    td, th{min-height:44px}
+    :root { --brand:#071949; --accent:#FFB41D; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans"; }
+    .card { @apply bg-white rounded-2xl shadow-sm border border-slate-200; }
+    .btn { @apply inline-flex items-center justify-center px-3 py-2 rounded-xl text-sm font-semibold border border-slate-300 hover:border-slate-400; }
+    .btn-primary { @apply bg-[color:var(--brand)] text-white border-transparent hover:opacity-90; }
+    .btn-muted { @apply bg-slate-50 text-slate-700; }
+    .field { @apply w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--accent)] focus:border-[color:var(--accent)]; }
+    .pill { @apply text-[11px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1; }
+    .grid-items { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4; }
+    @media print { .no-print { display:none !important; } body { background:white; } .card { box-shadow:none; border:1px solid #ddd; } }
   </style>
 </head>
-<body>
-  <header class="app-header">
-    <h1 class="app-title">
-      Danh sách Deal livestream ngày
-      <span class="calendar-pill" id="datePill" aria-label="Ngày hôm nay">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span id="today"></span>
-      </span>
-    </h1>
-  </header>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-4 md:p-6">
+    <!-- Header / Taskbar Top -->
+    <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <img src="https://dannygreen.vn/wp-content/uploads/2024/11/Logo-DannyGreen-R-07.webp" alt="DannyGreen" class="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1"/>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold">Danh sách Deal Livestream</h1>
+          <p class="text-sm text-slate-500">Nguồn dữ liệu đọc từ <span class="font-semibold">deals.xlsx</span> đặt cùng thư mục với file này.</p>
+        </div>
+      </div>
+      <div class="no-print flex flex-wrap items-center gap-2">
+        <button id="btnReload" class="btn">Tải lại Excel</button>
+        <label class="btn cursor-pointer">
+          Chọn Excel khác
+          <input id="pickXlsx" type="file" accept=".xlsx,.xls" class="hidden" />
+        </label>
+        <input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…" />
+      </div>
+    </header>
 
-  <main class="table-wrap">
-    <div class="scroll-x">
-      <table id="dealsTable" role="table" aria-label="Bảng deal sản phẩm">
-        <thead>
-          <tr>
-            <th class="img-cell">Hình ảnh</th>
-            <th>Tên sản phẩm</th>
-            <th>Giá gốc (ảo)</th>
-            <th>Giá thường (daily)</th>
-            <th>Giá sale</th>
-            <th>Giá sale 31/8</th>
-            <th>Giảm giá/Giá sale</th>
-            <th>Khuyến mãi tặng kèm</th>
-            <th>Vận chuyển</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </main>
+    <!-- Mục lớn (đọc từ sheet CONFIG, ô B2 nếu có) -->
+    <section class="card p-4 md:p-6 mb-6">
+      <div class="flex flex-col md:flex-row md:items-center gap-3">
+        <label class="text-sm font-semibold shrink-0">Mục lớn (Điền text từ Excel):</label>
+        <input id="bigTitle" class="field" placeholder="Ví dụ: CHIẾN DỊCH 9.9 – ƯU ĐÃI TOÀN SÀN" disabled />
+      </div>
+      <p class="mt-2 text-xs text-slate-500">* Gợi ý: Trong sheet <span class="font-semibold">CONFIG</span>, điền <code>A2 = BIG_TITLE</code>, <code>B2 = tiêu đề</code>.</p>
+    </section>
 
-  <!-- Footer -->
-  <footer>
-    © 2025-08-31 DannyGreen. Trang tổng hợp deal sản phẩm – By Nutt.
-  </footer>
+    <!-- Sections container -->
+    <div id="sections" class="space-y-6"></div>
 
-  <!-- Modal (bottom sheet) -->
-  <div class="modal" id="platformModal" aria-hidden="true">
-    <div class="modal-backdrop" data-close></div>
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-      <p class="sheet-title" id="sheetTitle">Mở liên kết sản phẩm</p>
-      <div class="btn-row" id="btnRow"></div>
-      <button class="close" data-close>Đóng</button>
-    </div>
+    <footer class="mt-10 text-xs text-slate-500">
+      Made for DannyGreen & Nhân Hòa • v2 (Excel-driven)
+    </footer>
   </div>
 
-  <!-- SheetJS for XLSX parsing -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <template id="sectionTemplate">
+    <section class="card p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="pill bg-slate-100 text-slate-700"></span>
+          <h2 class="text-xl font-bold"></h2>
+        </div>
+        <span class="text-xs text-slate-500">(đọc từ Excel)</span>
+      </div>
+      <div class="grid-items itemsWrap"></div>
+    </section>
+  </template>
+
+  <template id="itemCardTemplate">
+    <article class="relative card overflow-hidden">
+      <div class="aspect-[4/3] bg-slate-100 relative">
+        <img class="w-full h-full object-cover previewImg absolute inset-0" alt="preview" />
+      </div>
+      <div class="p-3 space-y-1.5">
+        <div class="text-sm font-semibold nameText truncate"></div>
+        <div class="text-[13px] text-slate-600 promoText"></div>
+        <div class="text-base font-bold priceText"></div>
+      </div>
+    </article>
+  </template>
 
   <script>
-    // 1) Today dd/mm display (no picker)
-    (function setToday(){
-      const d=new Date();
-      const dd=String(d.getDate()).padStart(2,'0');
-      const mm=String(d.getMonth()+1).padStart(2,'0');
-      const yyyy=d.getFullYear();
-      document.getElementById('today').textContent = `${dd}/${mm}/${yyyy}`;
-      document.getElementById('datePill').title = `Ngày ${dd}/${mm}/${yyyy}`;
-    })();
+    // ---- Config ----
+    const SECTION_DEFS = [
+      { key: 'mua2tang1', label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"', sheet: 'MUA2TANG1' },
+      { key: 'mua1tang1', label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"', sheet: 'MUA1TANG1' },
+      { key: 'trungthu',  label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU', sheet: 'TRUNGTHU' },
+      { key: 'giam50nuocep', label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
+      { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ', sheet: 'HANG_TUOI_HUU_CO' },
+    ];
 
-    // 2) Data holder
-    let products = [];
+    const DEFAULT_XLSX_PATH = 'deals.xlsx'; // đặt cùng thư mục với index.html
 
-    const tbody = document.getElementById('tbody');
+    // ---- State (không LocalStorage) ----
+    let state = {
+      bigTitle: '',
+      sections: Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]))
+    };
 
-    function createCell(html, className){
-      const td=document.createElement('td');
-      if(className) td.className=className;
-      td.innerHTML=html; return td;
+    // ---- Utils ----
+    const formatVND = (n) => {
+      if (n === '' || n === null || n === undefined || isNaN(Number(n))) return '';
+      try { return Number(n).toLocaleString('vi-VN') + '₫'; } catch { return n; }
+    };
+
+    function normalizeRow(row) {
+      // chấp nhận nhiều tiêu đề cột tương đương
+      const get = (aliases) => {
+        for (const a of aliases) {
+          for (const k of Object.keys(row)) {
+            if (k && k.toString().trim().toLowerCase() === a) return row[k];
+          }
+        }
+        return '';
+      };
+      return {
+        image: get(['hình ảnh','hinh anh','image','img','url','hình']),
+        name: get(['tên sản phẩm','ten san pham','name','product','sản phẩm']),
+        price: get(['giá bán cuối','gia ban cuoi','price','giá','gia']),
+        promo: get(['khuyến mãi','khuyen mai','promo','promotion','deal']),
+      };
     }
 
-    function render(){
-      tbody.innerHTML='';
-      products.forEach((p, idx)=>{
-        const tr=document.createElement('tr');
+    // ---- Render ----
+    const sectionsEl = document.getElementById('sections');
+    const sectionTpl = document.getElementById('sectionTemplate');
+    const itemTpl = document.getElementById('itemCardTemplate');
 
-        // Image cell (sticky & clickable)
-        const img = `<img class=\"img-64\" src=\"${p.image}\" alt=\"Ảnh sản phẩm\" loading=\"lazy\" data-idx=\"${idx}\" />`;
-        tr.appendChild(createCell(img, 'img-cell'));
+    function render() {
+      sectionsEl.innerHTML = '';
 
-        // Name cell (clickable)
-        const nameBtn = `<a href=\"#\" class=\"name-link\" data-idx=\"${idx}\">${p.name}</a>`;
-        tr.appendChild(createCell(nameBtn));
+      SECTION_DEFS.forEach((def, idx) => {
+        const node = sectionTpl.content.cloneNode(true);
+        const sec = node.querySelector('section');
+        sec.dataset.key = def.key;
+        sec.querySelector('h2').textContent = def.label;
+        sec.querySelector('.pill').textContent = `Mục ${idx + 1}`;
+        const wrap = sec.querySelector('.itemsWrap');
 
-        // Price and info cells (as plain text strings)
-        tr.appendChild(createCell(`<span class=\"num\">${p.gia_goc || ''}</span>`));
-        tr.appendChild(createCell(`<span class=\"num\">${p.gia_daily || ''}</span>`));
-        tr.appendChild(createCell(`<span class=\"num badge-sale\">${p.gia_sale || ''}</span>`));
-        tr.appendChild(createCell(`<span class=\"num price-green\">${p.gia_sale_31_8 || ''}</span>`));
-        tr.appendChild(createCell(`<span class=\"text-red\">${p.giam_gia_gia_sale || ''}</span>`));
-        tr.appendChild(createCell(`${p.khuyen_mai ? `<span class='tag'>${p.khuyen_mai}</span>` : ''}`));
-        tr.appendChild(createCell(`${p.van_chuyen || ''}`));
+        const items = (state.sections[def.key] || []);
+        items.forEach((it) => {
+          const card = itemTpl.content.cloneNode(true);
+          const el = card.querySelector('article');
+          el.dataset.id = it.id || crypto.randomUUID();
+          const img = card.querySelector('.previewImg');
+          const nm = card.querySelector('.nameText');
+          const pr = card.querySelector('.priceText');
+          const pm = card.querySelector('.promoText');
 
-        tbody.appendChild(tr);
+          if (it.image) { img.src = it.image; img.alt = it.name || 'Ảnh'; } else { img.remove(); }
+          nm.textContent = it.name || '';
+          pm.textContent = it.promo || '';
+          pr.textContent = formatVND(it.price);
+
+          wrap.appendChild(card);
+        });
+
+        sectionsEl.appendChild(node);
+      });
+
+      document.getElementById('bigTitle').value = state.bigTitle || '';
+    }
+
+    // ---- Excel Loader ----
+    async function loadFromUrl(path = DEFAULT_XLSX_PATH) {
+      try {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error('Không tìm thấy file: ' + path);
+        const buf = await res.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        applyWorkbook(wb);
+      } catch (e) {
+        console.warn('Load Excel lỗi:', e.message);
+        alert('Không tải được Excel mặc định ("' + path + '"). Hãy bấm "Chọn Excel khác" để mở file thủ công.');
+      }
+    }
+
+    function applyWorkbook(wb) {
+      // Big Title từ sheet CONFIG (A2 = BIG_TITLE, B2 = value)
+      const cfg = wb.Sheets['CONFIG'];
+      if (cfg) {
+        const data = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
+        for (const row of data) {
+          if ((row[0]||'').toString().trim().toUpperCase() === 'BIG_TITLE') {
+            state.bigTitle = row[1] || '';
+            break;
+          }
+        }
+      }
+
+      // Clear items trước khi nạp
+      state.sections = Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]));
+
+      // Đọc từng sheet theo định nghĩa
+      SECTION_DEFS.forEach(def => {
+        const sh = wb.Sheets[def.sheet];
+        if (!sh) return; // sheet không bắt buộc
+        const rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
+        const items = rows.map(r => normalizeRow(r)).filter(x => x.name || x.image || x.promo || x.price);
+        state.sections[def.key] = items;
+      });
+
+      render();
+    }
+
+    function handlePickXlsx(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          applyWorkbook(wb);
+        } catch (err) {
+          alert('Không đọc được file Excel này.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ---- Search (highlight) ----
+    function doSearch(q) {
+      const kw = (q||'').trim().toLowerCase();
+      const allCards = document.querySelectorAll('.itemsWrap article');
+      allCards.forEach(c => c.classList.remove('ring-2','ring-[color:var(--accent)]'));
+      if (!kw) return;
+      SECTION_DEFS.forEach(def => {
+        (state.sections[def.key] || []).forEach(it => {
+          const hit = (it.name||'').toLowerCase().includes(kw) || (it.promo||'').toLowerCase().includes(kw);
+          if (hit) {
+            const card = document.querySelector(`section[data-key="${def.key}"] article[data-id]`);
+            if (card) card.classList.add('ring-2','ring-[color:var(--accent)]');
+          }
+        });
       });
     }
 
-    // 3) Modal logic
-    const modal=document.getElementById('platformModal');
-    const btnRow=document.getElementById('btnRow');
-
-    function openModalForProduct(p){
-      btnRow.innerHTML='';
-      const hasShopee = p.links && p.links.shopee;
-      const hasTiktok = p.links && p.links.tiktok;
-
-      if(hasShopee){
-        btnRow.insertAdjacentHTML('beforeend', `<a class=\"btn btn-primary\" href=\"${p.links.shopee}\" target=\"_blank\" rel=\"noopener noreferrer\">Shopee</a>`);
-      }
-      if(hasTiktok){
-        btnRow.insertAdjacentHTML('beforeend', `<a class=\"btn\" href=\"${p.links.tiktok}\" target=\"_blank\" rel=\"noopener noreferrer\">TikTok</a>`);
-      }
-      if(!hasShopee && !hasTiktok){
-        btnRow.innerHTML = '<span style="font-size:13px;color:#566">Chưa có liên kết sản phẩm.</span>';
-      }
-      modal.setAttribute('open','');
-      modal.setAttribute('aria-hidden','false');
-    }
-
-    function closeModal(){
-      modal.removeAttribute('open');
-      modal.setAttribute('aria-hidden','true');
-    }
-
-    document.addEventListener('click', (e)=>{
-      const a = e.target.closest('a.name-link');
-      if(a){
-        e.preventDefault();
-        const p = products[Number(a.dataset.idx)];
-        openModalForProduct(p);
-      }
-      const img = e.target.closest('img.img-64');
-      if(img){
-        const p = products[Number(img.dataset.idx)];
-        openModalForProduct(p);
-      }
-      if(e.target.matches('[data-close]')){
-        closeModal();
-      }
-      if(e.target.classList.contains('modal-backdrop')){
-        closeModal();
-      }
+    // ---- Events ----
+    document.getElementById('btnReload').addEventListener('click', () => loadFromUrl());
+    document.getElementById('pickXlsx').addEventListener('change', (e) => {
+      const f = e.target.files?.[0]; if (f) handlePickXlsx(f); e.target.value = '';
+    });
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch(e.target.value || '');
     });
 
-    // 4) Auto-load data.xlsx from same folder
-    // Place a file named "data.xlsx" next to this index.html in your repo.
-    // Expected headers (Row 1):
-    // Hình ảnh | Tên sản phẩm | Giá gốc (ảo) | Giá thường (daily) | Giá sale | Giá sale 31/8 | Giảm giá/Giá sale | Khuyến mãi tặng kèm | Vận chuyển | Shopee | Tiktok
-    fetch('data.xlsx').then(r=>{
-      if(!r.ok) throw new Error('Không tìm thấy data.xlsx');
-      return r.arrayBuffer();
-    }).then(ab=>{
-      const wb = XLSX.read(ab, {type:'array'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws, {defval:""});
-      products = json.map(r=>({
-        image: r["Hình ảnh"] || r["Hinh anh"] || r["Image"],
-        name: r["Tên sản phẩm"] || r["Ten san pham"] || r["Name"],
-        gia_goc: r["Giá gốc (ảo)"] || r["Gia goc (ao)"] || r["Giá gốc"] || r["Gia goc"],
-        gia_daily: r["Giá thường (daily)"] || r["Gia thuong (daily)"] || r["Giá thường"] || r["Gia thuong"],
-        gia_sale: r["Giá sale"] || r["Gia sale"],
-        gia_sale_31_8: r["Giá sale 31/8"] || r["Gia sale 31/8"],
-        giam_gia_gia_sale: r["Giảm giá/Giá sale"] || r["Giam gia/Gia sale"],
-        khuyen_mai: r["Khuyến mãi tặng kèm"] || r["Khuyen mai tang kem"],
-        van_chuyen: r["Vận chuyển"] || r["Van chuyen"],
-        links: (function(){
-          const sh = r["Shopee"] || r["shopee"] || "";
-          const tt = r["Tiktok"] || r["TikTok"] || r["tiktok"] || "";
-          const obj={}; if(sh) obj.shopee=String(sh); if(tt) obj.tiktok=String(tt); return obj;
-        })()
-      })).filter(item=>item.name);
-      render();
-    }).catch(err=>{
-      console.warn('Load XLSX thất bại:', err.message);
-      // Optional: show a helper row suggesting to add data.xlsx
-      tbody.innerHTML = `<tr><td colspan="9" style="padding:16px;color:#566">Không tìm thấy <b>data.xlsx</b> trong cùng thư mục. Thêm file rồi reload trang nhé.</td></tr>`;
-    });
+    // ---- Init ----
+    render();
+    loadFromUrl();
   </script>
 </body>
 </html>
