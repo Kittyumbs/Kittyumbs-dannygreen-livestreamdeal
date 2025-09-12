@@ -43,11 +43,8 @@
         <label class="text-sm font-semibold">Mục lớn (Excel CONFIG):</label>
         <input id="bigTitle" class="field" disabled />
       </div>
-      <p class="mt-2 text-xs text-slate-500">Đặt file <b>deals.xlsx</b> trong <b>public/</b>. Truy cập trực tiếp thử: <code>/deals.xlsx</code></p>
     </section>
-
     <!-- Status + Sections -->
-    <div id="status" class="card p-4 md:p-6 mb-6 hidden"></div>
     <div id="sections" class="space-y-6"></div>
 
     <footer class="mt-10 text-xs text-slate-500">Made for DannyGreen & Nhân Hòa • v2.2 (Excel-driven)</footer>
@@ -61,7 +58,6 @@
           <span class="pill"></span>
           <h2 class="text-xl font-bold"></h2>
         </div>
-        <span class="text-xs text-slate-500">(đọc từ Excel)</span>
       </div>
       <div class="grid-items itemsWrap"></div>
     </section>
@@ -85,11 +81,11 @@
   document.addEventListener('DOMContentLoaded', function () {
     // ====== CẤU HÌNH ======
     const SECTION_DEFS = [
-      { key: 'mua2tang1',   label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"',       sheet: 'MUA2TANG1' },
-      { key: 'mua1tang1',   label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"',       sheet: 'MUA1TANG1' },
-      { key: 'trungthu',    label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU',            sheet: 'TRUNGTHU' },
-      { key: 'giam50nuocep',label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
-      { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ',     sheet: 'HANG_TUOI_HUU_CO' }
+      { key: 'mua2tang1',   label: 'CHƯƠNG TRÌNH “MUA 2 TẶNG 1"',       sheet: 'MUA2TANG1' },
+      { key: 'mua1tang1',   label: 'CHƯƠNG TRÌNH “MUA 1 TẶNG 1"',       sheet: 'MUA1TANG1' },
+      { key: 'trungthu',    label: 'CHƯƠNG TRÌNH TRUNG THU',            sheet: 'TRUNGTHU' },
+      { key: 'giam50nuocep',label: 'CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
+      { key: 'hangtuuuhco', label: 'CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ',     sheet: 'HANG_TUOI_HUU_CO' }
     ];
 
     var state = {
