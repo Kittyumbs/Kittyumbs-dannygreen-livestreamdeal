@@ -1,152 +1,235 @@
-<script>
-// ====== CẤU HÌNH ======
-const SECTION_DEFS = [
-  { key: 'mua2tang1',   label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"',       sheet: 'MUA2TANG1' },
-  { key: 'mua1tang1',   label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"',       sheet: 'MUA1TANG1' },
-  { key: 'trungthu',    label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU',            sheet: 'TRUNGTHU' },
-  { key: 'giam50nuocep',label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
-  { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ',     sheet: 'HANG_TUOI_HUU_CO' },
-];
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Danh sách Deal Livestream</title>
+  <link rel="icon" href="https://dannygreen.vn/wp-content/uploads/2024/08/DannyGreen-favicon.png" sizes="32x32">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
 
-var state = {
-  bigTitle: '',
-  sections: (function(){ const o={}; SECTION_DEFS.forEach(d=>o[d.key]=[]); return o; })()
-};
+  <!-- ƯU TIÊN: Thư viện XLSX local (đặt file này vào public/xlsx.full.min.js) -->
+  <script src="/xlsx.full.min.js" defer></script>
+  <!-- Fallback CDN nếu local không tải được -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js" defer></script>
 
-function formatVND(n){ if(n===''||n==null||isNaN(Number(n))) return ''; try{return Number(n).toLocaleString('vi-VN')+'₫';}catch(e){return n;} }
-function normalizeRow(row){
-  function get(aliases){
-    for (var i=0;i<aliases.length;i++){
-      var a=aliases[i];
-      for (var k in row){
-        if (!Object.prototype.hasOwnProperty.call(row,k)) continue;
-        if ((k||'').toString().trim().toLowerCase()===a) return row[k];
-      }
-    }
-    return '';
-  }
-  return {
-    image: get(['hình ảnh','hinh anh','image','img','url','hình']),
-    name:  get(['tên sản phẩm','ten san pham','name','product','sản phẩm']),
-    price: get(['giá bán cuối','gia ban cuoi','price','giá','gia']),
-    promo: get(['khuyến mãi','khuyen mai','promo','promotion','deal']),
-  };
-}
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue"; background:#f8fafc; color:#0f172a }
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .field{width:100%;border:1px solid #cbd5e1;border-radius:.75rem;padding:.5rem .75rem;font-size:.875rem}
+    .pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:9999px;padding:.25rem .625rem;background:#f1f5f9;color:#334155}
+    .grid-items{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1rem}
+    @media(min-width:640px){.grid-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(min-width:1024px){.grid-items{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+  <div class="max-w-7xl mx-auto p-4 md:p-6">
+    <!-- Header -->
+    <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <img src="https://dannygreen.vn/wp-content/uploads/2024/11/Logo-DannyGreen-R-07.webp" alt="DannyGreen" class="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1"/>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold">Danh sách Deal Livestream</h1>
+          <p class="text-sm text-slate-500">Nguồn dữ liệu đọc từ <span class="font-semibold">deals.xlsx</span> (đặt cùng origin)</p>
+        </div>
+      </div>
+      <div><input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…"/></div>
+    </header>
 
-// ====== RENDER ======
-var sectionsEl = document.getElementById('sections');
-var sectionTpl = document.getElementById('sectionTemplate');
-var itemTpl    = document.getElementById('itemCardTemplate');
-var statusEl   = document.getElementById('status');
+    <!-- Mục lớn -->
+    <section class="card p-4 md:p-6 mb-6">
+      <div class="flex flex-col md:flex-row md:items-center gap-3">
+        <label class="text-sm font-semibold">Mục lớn (Excel CONFIG):</label>
+        <input id="bigTitle" class="field" disabled />
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Đặt file <b>deals.xlsx</b> trong <b>public/</b>. Truy cập trực tiếp thử: <code>/deals.xlsx</code></p>
+    </section>
 
-function render(){
-  sectionsEl.innerHTML = '';
-  SECTION_DEFS.forEach(function(def, idx){
-    var node = sectionTpl.content.cloneNode(true);
-    var sec = node.querySelector('section');
-    sec.setAttribute('data-key', def.key);
-    sec.querySelector('h2').textContent = def.label;
-    sec.querySelector('.pill').textContent = 'Mục ' + (idx+1);
-    var wrap = sec.querySelector('.itemsWrap');
+    <!-- Status + Sections -->
+    <div id="status" class="card p-4 md:p-6 mb-6 hidden"></div>
+    <div id="sections" class="space-y-6"></div>
 
-    (state.sections[def.key]||[]).forEach(function(it){
-      var card = itemTpl.content.cloneNode(true);
-      var img  = card.querySelector('.previewImg');
-      var nm   = card.querySelector('.nameText');
-      var pr   = card.querySelector('.priceText');
-      var pm   = card.querySelector('.promoText');
+    <footer class="mt-10 text-xs text-slate-500">Made for DannyGreen & Nhân Hòa • v2.2 (Excel-driven)</footer>
+  </div>
 
-      if (it.image){ img.src = it.image; img.alt = it.name || 'Ảnh'; }
-      else { img.parentNode.removeChild(img); }
+  <!-- Templates -->
+  <template id="sectionTemplate">
+    <section class="card p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="pill"></span>
+          <h2 class="text-xl font-bold"></h2>
+        </div>
+        <span class="text-xs text-slate-500">(đọc từ Excel)</span>
+      </div>
+      <div class="grid-items itemsWrap"></div>
+    </section>
+  </template>
 
-      nm.textContent = it.name || '';
-      pr.textContent = formatVND(it.price);
-      pm.textContent = it.promo || '';
-      wrap.appendChild(card);
-    });
+  <template id="itemCardTemplate">
+    <article class="card overflow-hidden">
+      <div class="aspect-[4/3] bg-slate-100 relative">
+        <img class="w-full h-full object-cover previewImg absolute inset-0" alt="preview"/>
+      </div>
+      <div class="p-3 space-y-1.5">
+        <div class="text-sm font-semibold nameText truncate"></div>
+        <div class="text-[13px] text-slate-600 promoText"></div>
+        <div class="text-base font-bold priceText"></div>
+      </div>
+    </article>
+  </template>
 
-    sectionsEl.appendChild(node);
-  });
+  <!-- App Script -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // ====== CẤU HÌNH ======
+    const SECTION_DEFS = [
+      { key: 'mua2tang1',   label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"',       sheet: 'MUA2TANG1' },
+      { key: 'mua1tang1',   label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"',       sheet: 'MUA1TANG1' },
+      { key: 'trungthu',    label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU',            sheet: 'TRUNGTHU' },
+      { key: 'giam50nuocep',label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
+      { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ',     sheet: 'HANG_TUOI_HUU_CO' }
+    ];
 
-  var bt = document.getElementById('bigTitle');
-  if (bt) bt.value = state.bigTitle || '';
-}
+    var state = {
+      bigTitle: '',
+      sections: (function(){ var o={}; SECTION_DEFS.forEach(function(d){o[d.key]=[]}); return o; })()
+    };
 
-// ====== ĐỌC EXCEL (y như dự án đã chạy OK của em) ======
-function loadDeals(){
-  fetch('deals.xlsx', { cache: 'no-store' })
-    .then(function(res){
-      if(!res.ok) throw new Error('Không tìm thấy deals.xlsx');
-      return res.arrayBuffer();
-    })
-    .then(function(buf){
-      // XLSX phải có sẵn do ta đã <script src="...xlsx.full.min.js">
-      var wb = XLSX.read(buf, { type: 'array' });
-
-      // Big Title từ CONFIG (A2 = BIG_TITLE, B2 = value)
-      var cfg = wb.Sheets['CONFIG'];
-      if (cfg){
-        var rows = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
-        for (var i=0;i<rows.length;i++){
-          var r = rows[i];
-          var k = (r[0]||'').toString().trim().toUpperCase();
-          if (k === 'BIG_TITLE'){ state.bigTitle = r[1] || ''; break; }
+    function formatVND(n){ if(n===''||n==null||isNaN(Number(n))) return ''; try{return Number(n).toLocaleString('vi-VN')+'₫';}catch(e){return n;} }
+    function normalizeRow(row){
+      function get(aliases){
+        for (var i=0;i<aliases.length;i++){
+          var a=aliases[i];
+          for (var k in row){
+            if (!Object.prototype.hasOwnProperty.call(row,k)) continue;
+            if ((k||'').toString().trim().toLowerCase()===a) return row[k];
+          }
         }
+        return '';
       }
+      return {
+        image: get(['hình ảnh','hinh anh','image','img','url','hình']),
+        name:  get(['tên sản phẩm','ten san pham','name','product','sản phẩm']),
+        price: get(['giá bán cuối','gia ban cuoi','price','giá','gia']),
+        promo: get(['khuyến mãi','khuyen mai','promo','promotion','deal'])
+      };
+    }
 
-      // Xoá & nạp từng mục
-      state.sections = (function(){ const o={}; SECTION_DEFS.forEach(d=>o[d.key]=[]); return o; })();
+    // ====== DOM ======
+    var sectionsEl = document.getElementById('sections');
+    var sectionTpl = document.getElementById('sectionTemplate');
+    var itemTpl    = document.getElementById('itemCardTemplate');
+    var statusEl   = document.getElementById('status');
 
-      var logs = [];
-      SECTION_DEFS.forEach(function(def){
-        var sh = wb.Sheets[def.sheet];
-        if (!sh){ logs.push(def.sheet+' ✗ (không có)'); return; }
-        var rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
-        var items = rows.map(normalizeRow)
-                        .filter(function(x){ return x.name || x.image || x.promo || x.price; });
-        state.sections[def.key] = items;
-        logs.push(def.sheet+' ✓ ('+items.length+' dòng)');
+    function render(){
+      sectionsEl.innerHTML = '';
+      SECTION_DEFS.forEach(function(def, idx){
+        var node = sectionTpl.content.cloneNode(true);
+        var sec = node.querySelector('section');
+        sec.setAttribute('data-key', def.key);
+        sec.querySelector('h2').textContent = def.label;
+        sec.querySelector('.pill').textContent = 'Mục ' + (idx+1);
+        var wrap = sec.querySelector('.itemsWrap');
+
+        (state.sections[def.key]||[]).forEach(function(it){
+          var card = itemTpl.content.cloneNode(true);
+          var img  = card.querySelector('.previewImg');
+          var nm   = card.querySelector('.nameText');
+          var pr   = card.querySelector('.priceText');
+          var pm   = card.querySelector('.promoText');
+
+          if (it.image){ img.src = it.image; img.alt = it.name || 'Ảnh'; }
+          else { img.parentNode.removeChild(img); }
+
+          nm.textContent = it.name || '';
+          pr.textContent = formatVND(it.price);
+          pm.textContent = it.promo || '';
+          wrap.appendChild(card);
+        });
+
+        sectionsEl.appendChild(node);
       });
 
-      if (statusEl){
-        statusEl.classList.remove('hidden');
-        statusEl.innerHTML = '<div class="text-sm"><b>Trạng thái nạp Excel</b>: '+logs.join(' • ')+'</div>';
-      }
-      render();
-    })
-    .catch(function(err){
-      showError("Không tải được deals.xlsx. Chi tiết: " + (err && err.message ? err.message : err));
-    });
-}
+      var bt = document.getElementById('bigTitle');
+      if (bt) bt.value = state.bigTitle || '';
+    }
 
-// ====== SEARCH (như cũ) ======
-function doSearch(q){
-  var kw = (q||'').trim().toLowerCase();
-  document.querySelectorAll('.itemsWrap article').forEach(function(c){ c.classList.remove('ring-2'); });
-  if (!kw) return;
-  SECTION_DEFS.forEach(function(def){
-    (state.sections[def.key]||[]).forEach(function(it){
-      var hit = (it.name||'').toLowerCase().includes(kw) || (it.promo||'').toLowerCase().includes(kw);
-      if (hit){
-        var card = document.querySelector('section[data-key="'+def.key+'"] article');
-        if (card) card.classList.add('ring-2');
+    function showError(msg){
+      var box = document.createElement('div');
+      box.className = 'card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';
+      box.innerHTML = '<div class="font-semibold mb-1">Lỗi Excel</div><pre class="text-sm whitespace-pre-wrap">'+(msg||'')+'</pre>';
+      document.querySelector('.max-w-7xl').prepend(box);
+    }
+
+    // ====== ĐỌC EXCEL ======
+    function loadDeals(){
+      fetch('deals.xlsx', { cache: 'no-store' })
+        .then(function(res){
+          if(!res.ok) throw new Error('Không tìm thấy deals.xlsx');
+          return res.arrayBuffer();
+        })
+        .then(function(buf){
+          if (!window.XLSX) throw new Error('XLSX chưa sẵn sàng. Kiểm tra /xlsx.full.min.js');
+          var wb = XLSX.read(buf, { type: 'array' });
+
+          var cfg = wb.Sheets['CONFIG'];
+          if (cfg){
+            var rows = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
+            for (var i=0;i<rows.length;i++){
+              var r = rows[i];
+              var k = (r[0]||'').toString().trim().toUpperCase();
+              if (k === 'BIG_TITLE'){ state.bigTitle = r[1] || ''; break; }
+            }
+          }
+
+          state.sections = (function(){ var o={}; SECTION_DEFS.forEach(function(d){o[d.key]=[]}); return o; })();
+
+          var logs = [];
+          SECTION_DEFS.forEach(function(def){
+            var sh = wb.Sheets[def.sheet];
+            if (!sh){ logs.push(def.sheet+' ✗ (không có)'); return; }
+            var rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
+            var items = rows.map(normalizeRow)
+                            .filter(function(x){ return x.name || x.image || x.promo || x.price; });
+            state.sections[def.key] = items;
+            logs.push(def.sheet+' ✓ ('+items.length+' dòng)');
+          });
+
+          if (statusEl){
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = '<div class="text-sm"><b>Trạng thái nạp Excel</b>: '+logs.join(' • ')+'</div>';
+          }
+          render();
+        })
+        .catch(function(err){
+          showError("Không tải được deals.xlsx. Chi tiết: " + (err && err.message ? err.message : err));
+        });
+    }
+
+    // Search
+    var si = document.getElementById('searchInput');
+    if (si) si.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){
+        var kw = (e.target.value||'').trim().toLowerCase();
+        document.querySelectorAll('.itemsWrap article').forEach(function(c){ c.classList.remove('ring-2'); });
+        SECTION_DEFS.forEach(function(def){
+          (state.sections[def.key]||[]).forEach(function(it){
+            var hit = (it.name||'').toLowerCase().includes(kw) || (it.promo||'').toLowerCase().includes(kw);
+            if (hit){
+              var card = document.querySelector('section[data-key="'+def.key+'"] article');
+              if (card) card.classList.add('ring-2');
+            }
+          });
+        });
       }
     });
+
+    // Start
+    render();
+    loadDeals();
   });
-}
-
-document.getElementById('searchInput') &&
-document.getElementById('searchInput').addEventListener('keydown', function(e){
-  if (e.key === 'Enter') doSearch(e.target.value||'');
-});
-
-// ====== INIT ======
-function showError(msg){
-  var box = document.createElement('div');
-  box.className = 'card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';
-  box.innerHTML = '<div class="font-semibold mb-1">Lỗi Excel</div><pre class="text-sm whitespace-pre-wrap">'+(msg||'')+'</pre>';
-  document.querySelector('.max-w-7xl').prepend(box);
-}
-render();
-loadDeals();
-</script>
+  </script>
+</body>
+</html>
