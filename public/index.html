@@ -18,9 +18,7 @@
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
     .field{width:100%;border:1px solid #cbd5e1;border-radius:.75rem;padding:.5rem .75rem;font-size:.875rem}
     .pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:9999px;padding:.25rem .625rem;background:#f1f5f9;color:#334155}
-    .grid-items{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1rem}
-    @media(min-width:640px){.grid-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(min-width:1024px){.grid-items{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
   </style>
 </head>
 <body>
@@ -30,7 +28,7 @@
       <div class="flex items-center gap-3">
         <img src="https://dannygreen.vn/wp-content/uploads/2024/11/Logo-DannyGreen-R-07.webp" alt="DannyGreen" class="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1"/>
         <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold">CHIẾN DỊCH 9.9 – ƯU ĐÃI TOÀN SÀN</h1>
+          <h1 class="text-2xl md:text-3xl font-extrabold">Deal Tháng 9 Livestream</h1>
         </div>
       </div>
       <div><input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…"/></div>
@@ -58,12 +56,12 @@
           <h2 class="text-xl font-bold"></h2>
         </div>
       </div>
-      <div class="grid-items itemsWrap"></div>
+      <div class="flex overflow-x-auto gap-4 itemsWrap"></div>
     </section>
   </template>
 
   <template id="itemCardTemplate">
-    <article class="card overflow-hidden">
+    <article class="card overflow-hidden min-w-[220px] flex-[0_0_auto]">
       <div class="aspect-[4/3] bg-slate-100 relative">
         <img class="w-full h-full object-cover previewImg absolute inset-0" alt="preview"/>
       </div>
