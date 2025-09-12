@@ -13,13 +13,15 @@
   <style>
     :root { --brand:#071949; --accent:#FFB41D; }
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans"; }
-    .card { @apply bg-white rounded-2xl shadow-sm border border-slate-200; }
-    .btn { @apply inline-flex items-center justify-center px-3 py-2 rounded-xl text-sm font-semibold border border-slate-300 hover:border-slate-400; }
-    .btn-primary { @apply bg-[color:var(--brand)] text-white border-transparent hover:opacity-90; }
-    .btn-muted { @apply bg-slate-50 text-slate-700; }
-    .field { @apply w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--accent)] focus:border-[color:var(--accent)]; }
-    .pill { @apply text-[11px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1; }
-    .grid-items { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4; }
+    /* NOTE: Không dùng @apply để tránh lỗi khi không có build Tailwind */
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:.5rem .75rem;border:1px solid #cbd5e1;border-radius:.75rem;font-weight:600;font-size:.875rem;background:#fff}
+    .btn-primary{background:var(--brand);color:#fff;border-color:transparent}
+    .field{width:100%;border:1px solid #cbd5e1;border-radius:.75rem;padding:.5rem .75rem;font-size:.875rem}
+    .pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:9999px;padding:.25rem .625rem;background:#f1f5f9;color:#334155}
+    .grid-items{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1rem}
+    @media(min-width:640px){.grid-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(min-width:1024px){.grid-items{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media print { .no-print { display:none !important; } body { background:white; } .card { box-shadow:none; border:1px solid #ddd; } }
   </style>
 </head>
@@ -35,11 +37,6 @@
         </div>
       </div>
       <div class="no-print flex flex-wrap items-center gap-2">
-        <button id="btnReload" class="btn">Tải lại Excel</button>
-        <label class="btn cursor-pointer">
-          Chọn Excel khác
-          <input id="pickXlsx" type="file" accept=".xlsx,.xls" class="hidden" />
-        </label>
         <input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…" />
       </div>
     </header>
@@ -50,7 +47,7 @@
         <label class="text-sm font-semibold shrink-0">Mục lớn (Điền text từ Excel):</label>
         <input id="bigTitle" class="field" placeholder="Ví dụ: CHIẾN DỊCH 9.9 – ƯU ĐÃI TOÀN SÀN" disabled />
       </div>
-      <p class="mt-2 text-xs text-slate-500">* Gợi ý: Trong sheet <span class="font-semibold">CONFIG</span>, điền <code>A2 = BIG_TITLE</code>, <code>B2 = tiêu đề</code>.</p>
+      <p class="mt-2 text-xs text-slate-500">* File Excel <span class="font-semibold">deals.xlsx</span> phải đặt cùng thư mục và được host cùng origin với trang này (VD: GitHub Pages/Vercel/public). Tự động tải khi mở trang.</p>
     </section>
 
     <!-- Sections container -->
@@ -65,7 +62,7 @@
     <section class="card p-4 md:p-6">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <span class="pill bg-slate-100 text-slate-700"></span>
+          <span class="pill"></span>
           <h2 class="text-xl font-bold"></h2>
         </div>
         <span class="text-xs text-slate-500">(đọc từ Excel)</span>
@@ -97,7 +94,7 @@
       { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ', sheet: 'HANG_TUOI_HUU_CO' },
     ];
 
-    const DEFAULT_XLSX_PATH = 'deals.xlsx'; // đặt cùng thư mục với index.html
+    const CANDIDATE_PATHS = [ 'deals.xlsx', './deals.xlsx', '/deals.xlsx' ];
 
     // ---- State (không LocalStorage) ----
     let state = {
@@ -112,11 +109,10 @@
     };
 
     function normalizeRow(row) {
-      // chấp nhận nhiều tiêu đề cột tương đương
       const get = (aliases) => {
         for (const a of aliases) {
           for (const k of Object.keys(row)) {
-            if (k && k.toString().trim().toLowerCase() === a) return row[k];
+            if ((k||'').toString().trim().toLowerCase() === a) return row[k];
           }
         }
         return '';
@@ -136,7 +132,6 @@
 
     function render() {
       sectionsEl.innerHTML = '';
-
       SECTION_DEFS.forEach((def, idx) => {
         const node = sectionTpl.content.cloneNode(true);
         const sec = node.querySelector('section');
@@ -144,85 +139,64 @@
         sec.querySelector('h2').textContent = def.label;
         sec.querySelector('.pill').textContent = `Mục ${idx + 1}`;
         const wrap = sec.querySelector('.itemsWrap');
-
         const items = (state.sections[def.key] || []);
         items.forEach((it) => {
           const card = itemTpl.content.cloneNode(true);
           const el = card.querySelector('article');
-          el.dataset.id = it.id || crypto.randomUUID();
+          el.dataset.id = it.id || (Math.random().toString(36).slice(2));
           const img = card.querySelector('.previewImg');
           const nm = card.querySelector('.nameText');
           const pr = card.querySelector('.priceText');
           const pm = card.querySelector('.promoText');
-
           if (it.image) { img.src = it.image; img.alt = it.name || 'Ảnh'; } else { img.remove(); }
           nm.textContent = it.name || '';
           pm.textContent = it.promo || '';
           pr.textContent = formatVND(it.price);
-
           wrap.appendChild(card);
         });
-
         sectionsEl.appendChild(node);
       });
-
       document.getElementById('bigTitle').value = state.bigTitle || '';
     }
 
     // ---- Excel Loader ----
-    async function loadFromUrl(path = DEFAULT_XLSX_PATH) {
-      try {
-        const res = await fetch(path);
-        if (!res.ok) throw new Error('Không tìm thấy file: ' + path);
-        const buf = await res.arrayBuffer();
-        const wb = XLSX.read(buf, { type: 'array' });
-        applyWorkbook(wb);
-      } catch (e) {
-        console.warn('Load Excel lỗi:', e.message);
-        alert('Không tải được Excel mặc định ("' + path + '"). Hãy bấm "Chọn Excel khác" để mở file thủ công.');
+    async function loadFromUrlOnce(path) {
+      const url = path + (path.includes('?') ? '' : `?t=${Date.now()}`);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' at ' + path);
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      applyWorkbook(wb);
+    }
+
+    async function loadFromCandidates() {
+      let lastErr = null;
+      for (const p of CANDIDATE_PATHS) {
+        try { await loadFromUrlOnce(p); return; }
+        catch (e) { lastErr = e; }
       }
+      showError("Không tìm thấy 'deals.xlsx' ở cùng thư mục hoặc cùng origin.
+Hãy đảm bảo file được host cạnh 'index.html' (GitHub Pages/Vercel).
+Chi tiết: " + (lastErr && lastErr.message ? lastErr.message : ''));
     }
 
     function applyWorkbook(wb) {
-      // Big Title từ sheet CONFIG (A2 = BIG_TITLE, B2 = value)
       const cfg = wb.Sheets['CONFIG'];
       if (cfg) {
         const data = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
         for (const row of data) {
-          if ((row[0]||'').toString().trim().toUpperCase() === 'BIG_TITLE') {
-            state.bigTitle = row[1] || '';
-            break;
-          }
+          if ((row[0]||'').toString().trim().toUpperCase() === 'BIG_TITLE') { state.bigTitle = row[1] || ''; break; }
         }
       }
-
-      // Clear items trước khi nạp
       state.sections = Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]));
-
-      // Đọc từng sheet theo định nghĩa
       SECTION_DEFS.forEach(def => {
         const sh = wb.Sheets[def.sheet];
-        if (!sh) return; // sheet không bắt buộc
+        if (!sh) return;
         const rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
         const items = rows.map(r => normalizeRow(r)).filter(x => x.name || x.image || x.promo || x.price);
         state.sections[def.key] = items;
       });
-
       render();
-    }
-
-    function handlePickXlsx(file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: 'array' });
-          applyWorkbook(wb);
-        } catch (err) {
-          alert('Không đọc được file Excel này.');
-        }
-      };
-      reader.readAsArrayBuffer(file);
     }
 
     // ---- Search (highlight) ----
@@ -243,17 +217,21 @@
     }
 
     // ---- Events ----
-    document.getElementById('btnReload').addEventListener('click', () => loadFromUrl());
-    document.getElementById('pickXlsx').addEventListener('change', (e) => {
-      const f = e.target.files?.[0]; if (f) handlePickXlsx(f); e.target.value = '';
-    });
     document.getElementById('searchInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') doSearch(e.target.value || '');
     });
 
     // ---- Init ----
     render();
-    loadFromUrl();
+    loadFromCandidates();
+
+    function showError(msg) {
+      const box = document.createElement('div');
+      box.className = 'card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';
+      box.innerHTML = `<div class="font-semibold mb-1">Lỗi tải Excel</div><pre class="text-sm whitespace-pre-wrap">${msg}</pre>`;
+      document.querySelector('.max-w-7xl').prepend(box);
+      console.warn(msg);
+    }
   </script>
 </body>
 </html>
