@@ -6,42 +6,59 @@
   <title>Danh sách Deal Livestream</title>
   <link rel="icon" href="https://dannygreen.vn/wp-content/uploads/2024/08/DannyGreen-favicon.png" sizes="32x32">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+  <!-- XLSX CDN with dual fallback -->
+  <script id="xlsx-jsdelivr" src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script id="xlsx-unpkg" src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Inter, sans-serif; background:#f8fafc; color:#0f172a }
+    :root { --brand:#071949; --accent:#FFB41D; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans"; }
+    /* NOTE: Không dùng @apply để tránh lỗi khi không có build Tailwind */
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:.5rem .75rem;border:1px solid #cbd5e1;border-radius:.75rem;font-weight:600;font-size:.875rem;background:#fff}
+    .btn-primary{background:var(--brand);color:#fff;border-color:transparent}
     .field{width:100%;border:1px solid #cbd5e1;border-radius:.75rem;padding:.5rem .75rem;font-size:.875rem}
     .pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:9999px;padding:.25rem .625rem;background:#f1f5f9;color:#334155}
     .grid-items{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1rem}
     @media(min-width:640px){.grid-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(min-width:1024px){.grid-items{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media print { .no-print { display:none !important; } body { background:white; } .card { box-shadow:none; border:1px solid #ddd; } }
   </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-900">
   <div class="max-w-7xl mx-auto p-4 md:p-6">
+    <!-- Header / Taskbar Top -->
     <header class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
       <div class="flex items-center gap-3">
         <img src="https://dannygreen.vn/wp-content/uploads/2024/11/Logo-DannyGreen-R-07.webp" alt="DannyGreen" class="h-10 w-auto rounded-lg border border-slate-200 bg-white p-1"/>
         <div>
           <h1 class="text-2xl md:text-3xl font-extrabold">Danh sách Deal Livestream</h1>
-          <p class="text-sm text-slate-500">Nguồn dữ liệu đọc từ <span class="font-semibold">deals.xlsx</span></p>
+          <p class="text-sm text-slate-500">Nguồn dữ liệu đọc từ <span class="font-semibold">deals.xlsx</span> đặt cùng thư mục với file này.</p>
         </div>
       </div>
-      <div><input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…"/></div>
+      <div class="no-print flex flex-wrap items-center gap-2">
+        <input id="searchInput" class="field" placeholder="Tìm theo tên sản phẩm/khuyến mãi…" />
+      </div>
     </header>
 
+    <!-- Mục lớn (đọc từ sheet CONFIG, ô B2 nếu có) -->
     <section class="card p-4 md:p-6 mb-6">
       <div class="flex flex-col md:flex-row md:items-center gap-3">
-        <label class="text-sm font-semibold">Mục lớn (Excel CONFIG):</label>
-        <input id="bigTitle" class="field" disabled />
+        <label class="text-sm font-semibold shrink-0">Mục lớn (Điền text từ Excel):</label>
+        <input id="bigTitle" class="field" placeholder="Ví dụ: CHIẾN DỊCH 9.9 – ƯU ĐÃI TOÀN SÀN" disabled />
       </div>
-      <p class="mt-2 text-xs text-slate-500">File Excel <b>deals.xlsx</b> phải nằm trong thư mục <b>public/</b></p>
+      <p class="mt-2 text-xs text-slate-500">* File Excel <span class="font-semibold">deals.xlsx</span> phải đặt cùng thư mục và được host cùng origin với trang này (VD: GitHub Pages/Vercel/public). Tự động tải khi mở trang.</p>
     </section>
 
+    <!-- Sections container -->
     <div id="status" class="card p-4 md:p-6 mb-6 hidden"></div>
     <div id="sections" class="space-y-6"></div>
-    <footer class="mt-10 text-xs text-slate-500">Made for DannyGreen & Nhân Hòa • v2.1 (Excel-driven)</footer>
+
+    <footer class="mt-10 text-xs text-slate-500">
+      Made for DannyGreen & Nhân Hòa • v2.1 (Excel-driven)
+    </footer>
   </div>
 
   <template id="sectionTemplate">
@@ -58,9 +75,9 @@
   </template>
 
   <template id="itemCardTemplate">
-    <article class="card overflow-hidden">
+    <article class="relative card overflow-hidden">
       <div class="aspect-[4/3] bg-slate-100 relative">
-        <img class="w-full h-full object-cover previewImg absolute inset-0" alt="preview"/>
+        <img class="w-full h-full object-cover previewImg absolute inset-0" alt="preview" />
       </div>
       <div class="p-3 space-y-1.5">
         <div class="text-sm font-semibold nameText truncate"></div>
@@ -70,32 +87,198 @@
     </article>
   </template>
 
-<script>
-const SECTION_DEFS=[
-  {key:'mua2tang1',label:'Mục 1: CHƯƠNG TRÌNH MUA 2 TẶNG 1',sheet:'MUA2TANG1'},
-  {key:'mua1tang1',label:'Mục 2: CHƯƠNG TRÌNH MUA 1 TẶNG 1',sheet:'MUA1TANG1'},
-  {key:'trungthu',label:'Mục 3: CHƯƠNG TRÌNH TRUNG THU',sheet:'TRUNGTHU'},
-  {key:'giam50nuocep',label:'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON',sheet:'GIAM50_NUOCEP'},
-  {key:'hangtuuuhco',label:'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ',sheet:'HANG_TUOI_HUU_CO'}
-];
-const PATHS=['/deals.xlsx','./deals.xlsx','deals.xlsx'];
-var state={bigTitle:'',sections:Object.fromEntries(SECTION_DEFS.map(d=>[d.key,[]]))};
+  <script>
+    // ---- Config ----
+    const SECTION_DEFS = [
+      { key: 'mua2tang1', label: 'Mục 1: CHƯƠNG TRÌNH “MUA 2 TẶNG 1"', sheet: 'MUA2TANG1' },
+      { key: 'mua1tang1', label: 'Mục 2: CHƯƠNG TRÌNH “MUA 1 TẶNG 1"', sheet: 'MUA1TANG1' },
+      { key: 'trungthu',  label: 'Mục 3: CHƯƠNG TRÌNH TRUNG THU', sheet: 'TRUNGTHU' },
+      { key: 'giam50nuocep', label: 'Mục 4: CHƯƠNG TRÌNH GIẢM 50% NƯỚC ÉP LON', sheet: 'GIAM50_NUOCEP' },
+      { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ', sheet: 'HANG_TUOI_HUU_CO' },
+    ];
 
-function formatVND(n){if(!n||isNaN(Number(n)))return'';return Number(n).toLocaleString('vi-VN')+'₫';}
-function normalizeRow(r){function g(a){for(let i of a){for(let k in r){if(k.toLowerCase().trim()==i)return r[k];}}return'';}
-return{image:g(['hình ảnh','image','img','url']),name:g(['tên sản phẩm','name','product']),price:g(['giá bán cuối','price','giá']),promo:g(['khuyến mãi','promo','deal'])};}
+    const CANDIDATE_PATHS = [ '/deals.xlsx', './deals.xlsx', 'deals.xlsx' ];
 
-const sectionsEl=document.getElementById('sections');const sectionTpl=document.getElementById('sectionTemplate');const itemTpl=document.getElementById('itemCardTemplate');
-function render(){sectionsEl.innerHTML='';SECTION_DEFS.forEach((def,i)=>{let node=sectionTpl.content.cloneNode(true),sec=node.querySelector('section');sec.dataset.key=def.key;sec.querySelector('h2').textContent=def.label;sec.querySelector('.pill').textContent='Mục '+(i+1);let wrap=sec.querySelector('.itemsWrap');(state.sections[def.key]||[]).forEach(it=>{let card=itemTpl.content.cloneNode(true);let img=card.querySelector('.previewImg');if(it.image){img.src=it.image;img.alt=it.name||'Ảnh';}else{img.remove()}card.querySelector('.nameText').textContent=it.name||'';card.querySelector('.promoText').textContent=it.promo||'';card.querySelector('.priceText').textContent=formatVND(it.price);wrap.appendChild(card)});sectionsEl.appendChild(node)});document.getElementById('bigTitle').value=state.bigTitle||'';}
+    // ---- State (không LocalStorage) ----
+    let state = {
+      bigTitle: '',
+      sections: Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]))
+    };
 
-async function loadOnce(p){let u=p+(p.includes('?')?'':'?t='+Date.now());let r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);let wb=XLSX.read(await r.arrayBuffer(),{type:'array'});applyWorkbook(wb);}
-async function loadCandidates(){let e=null;for(let p of PATHS){try{await loadOnce(p);return}catch(x){e=x}}showError("Không tìm thấy deals.xlsx. "+e);}
-function applyWorkbook(wb){let log=[],cfg=wb.Sheets['CONFIG'];if(cfg){let data=XLSX.utils.sheet_to_json(cfg,{header:1,defval:''});for(let row of data){if((row[0]||'').toString().trim().toUpperCase()==='BIG_TITLE'){state.bigTitle=row[1]||'';break}}log.push('CONFIG ✓')}else log.push('CONFIG ✗');state.sections=Object.fromEntries(SECTION_DEFS.map(d=>[d.key,[]]));SECTION_DEFS.forEach(def=>{let sh=wb.Sheets[def.sheet];if(!sh){log.push(def.sheet+' ✗');return;}let rows=XLSX.utils.sheet_to_json(sh,{defval:''});let items=rows.map(r=>normalizeRow(r)).filter(x=>x.name||x.image||x.promo||x.price);state.sections[def.key]=items;log.push(def.sheet+' ✓('+items.length+' dòng)')});render();let st=document.getElementById('status');st.classList.remove('hidden');st.innerHTML='<b>Trạng thái Excel</b>: '+log.join(' • ');}
+    // ---- Utils ----
+    const formatVND = (n) => {
+      if (n === '' || n === null || n === undefined || isNaN(Number(n))) return '';
+      try { return Number(n).toLocaleString('vi-VN') + '₫'; } catch { return n; }
+    };
 
-function doSearch(q){let kw=q.trim().toLowerCase();document.querySelectorAll('.itemsWrap article').forEach(c=>c.classList.remove('ring-2'));if(!kw)return;SECTION_DEFS.forEach(def=>{(state.sections[def.key]||[]).forEach(it=>{if((it.name||'').toLowerCase().includes(kw)||(it.promo||'').toLowerCase().includes(kw)){let card=document.querySelector('section[data-key="'+def.key+'"] article');if(card)card.classList.add('ring-2')}})})}
-document.getElementById('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch(e.target.value)});
-render();loadCandidates();
-function showError(m){let b=document.createElement('div');b.className='card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';b.innerHTML='<div class="font-semibold mb-1">Lỗi Excel</div><pre>'+m+'</pre>';document.querySelector('.max-w-7xl').prepend(b);}
-</script>
+    function normalizeRow(row) {
+      const get = (aliases) => {
+        for (const a of aliases) {
+          for (const k of Object.keys(row)) {
+            if ((k||'').toString().trim().toLowerCase() === a) return row[k];
+          }
+        }
+        return '';
+      };
+      return {
+        image: get(['hình ảnh','hinh anh','image','img','url','hình']),
+        name: get(['tên sản phẩm','ten san pham','name','product','sản phẩm']),
+        price: get(['giá bán cuối','gia ban cuoi','price','giá','gia']),
+        promo: get(['khuyến mãi','khuyen mai','promo','promotion','deal']),
+      };
+    }
+
+    // ---- Render ----
+    const sectionsEl = document.getElementById('sections');
+    const sectionTpl = document.getElementById('sectionTemplate');
+    const itemTpl = document.getElementById('itemCardTemplate');
+
+    function render() {
+      sectionsEl.innerHTML = '';
+      SECTION_DEFS.forEach((def, idx) => {
+        const node = sectionTpl.content.cloneNode(true);
+        const sec = node.querySelector('section');
+        sec.dataset.key = def.key;
+        sec.querySelector('h2').textContent = def.label;
+        sec.querySelector('.pill').textContent = `Mục ${idx + 1}`;
+        const wrap = sec.querySelector('.itemsWrap');
+        const items = (state.sections[def.key] || []);
+        items.forEach((it) => {
+          const card = itemTpl.content.cloneNode(true);
+          const el = card.querySelector('article');
+          el.dataset.id = it.id || (Math.random().toString(36).slice(2));
+          const img = card.querySelector('.previewImg');
+          const nm = card.querySelector('.nameText');
+          const pr = card.querySelector('.priceText');
+          const pm = card.querySelector('.promoText');
+          if (it.image) { img.src = it.image; img.alt = it.name || 'Ảnh'; } else { img.remove(); }
+          nm.textContent = it.name || '';
+          pm.textContent = it.promo || '';
+          pr.textContent = formatVND(it.price);
+          wrap.appendChild(card);
+        });
+        sectionsEl.appendChild(node);
+      });
+      document.getElementById('bigTitle').value = state.bigTitle || '';
+    }
+
+    // ---- Excel Loader ----
+    async function loadFromUrlOnce(path) {
+      const url = path + (path.includes('?') ? '' : `?t=${Date.now()}`);
+      console.log('[fetch] trying:', url);
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' at ' + path);
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      console.log('[fetch] success:', path, 'sheets:', wb.SheetNames);
+      applyWorkbook(wb);
+    }
+
+    async function loadFromCandidates() {
+      let lastErr = null;
+      for (const p of CANDIDATE_PATHS) {
+        try { await loadFromUrlOnce(p); return; }
+        catch (e) { lastErr = e; }
+      }
+      showError(
+  "Không tìm thấy 'deals.xlsx'.\n" +
+  "• Nếu deploy trên Vercel/Next.js: đặt file vào thư mục PUBLIC và truy cập qua /deals.xlsx.\n" +
+  "• Nếu static (Other): vẫn nên đặt vào /public.\n" +
+  "• Kiểm tra trực tiếp URL: /deals.xlsx\n" +
+  "Chi tiết: " + (lastErr && lastErr.message ? lastErr.message : '')
+);
+    }
+
+    function applyWorkbook(wb) {
+      const statusEl = document.getElementById('status');
+      let logs = [];
+
+      const cfg = wb.Sheets['CONFIG'];
+      if (cfg) {
+        const data = XLSX.utils.sheet_to_json(cfg, { header:1, defval:'' });
+        for (const row of data) {
+          if ((row[0]||'').toString().trim().toUpperCase() === 'BIG_TITLE') { state.bigTitle = row[1] || ''; break; }
+        }
+        logs.push('CONFIG ✓');
+      } else {
+        logs.push('CONFIG ✗ (không có)');
+      }
+      state.sections = Object.fromEntries(SECTION_DEFS.map(d => [d.key, []]));
+      SECTION_DEFS.forEach(def => {
+        const sh = wb.Sheets[def.sheet];
+        if (!sh) { logs.push(def.sheet + ' ✗ (không có)'); return; }
+        const rows = XLSX.utils.sheet_to_json(sh, { defval:'' });
+        const items = rows.map(r => normalizeRow(r)).filter(x => x.name || x.image || x.promo || x.price);
+        state.sections[def.key] = items;
+        logs.push(def.sheet + ` ✓ (${items.length} dòng)`);
+      });
+      render();
+      // show status
+      statusEl.classList.remove('hidden');
+      statusEl.innerHTML = `<div class="text-sm"><b>Trạng thái nạp Excel</b>: ${logs.join(' • ')}</div>`;
+    }
+
+    // ---- Search (highlight) ----
+    function doSearch(q) {
+      const kw = (q||'').trim().toLowerCase();
+      const allCards = document.querySelectorAll('.itemsWrap article');
+      allCards.forEach(c => c.classList.remove('ring-2','ring-[color:var(--accent)]'));
+      if (!kw) return;
+      SECTION_DEFS.forEach(def => {
+        (state.sections[def.key] || []).forEach(it => {
+          const hit = (it.name||'').toLowerCase().includes(kw) || (it.promo||'').toLowerCase().includes(kw);
+          if (hit) {
+            const card = document.querySelector(`section[data-key="${def.key}"] article[data-id]`);
+            if (card) card.classList.add('ring-2','ring-[color:var(--accent)]');
+          }
+        });
+      });
+    }
+
+    // ---- Events ----
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch(e.target.value || '');
+    });
+
+    // ---- Init ----
+    (async function init(){
+      try {
+        await ensureXLSX();
+        render();
+        loadFromCandidates();
+      } catch (e) {
+        showError('Không tải được thư viện XLSX. Có thể bị chặn bởi extension/chính sách mạng.\nChi tiết: ' + (e && e.message ? e.message : e));
+      }
+    })();
+
+    function ensureXLSX(){
+      return new Promise((resolve, reject) => {
+        let tries = 0;
+        const maxTries = 40; // ~4s
+        const tick = () => {
+          if (window.XLSX) return resolve();
+          tries++;
+          if (tries > maxTries) {
+            // cuối cùng thử dynamic import ESM
+            import('https://cdn.jsdelivr.net/npm/xlsx@0.20.3/+esm').then(mod => {
+              window.XLSX = mod;
+              resolve();
+            }).catch(reject);
+            return;
+          }
+          setTimeout(tick, 100);
+        };
+        tick();
+      });
+    }
+
+    function showError(msg) {
+      const box = document.createElement('div');
+      box.className = 'card p-4 md:p-6 mb-6 border-red-300 bg-red-50 text-red-800';
+      box.innerHTML = `<div class="font-semibold mb-1">Lỗi tải Excel</div><pre class="text-sm whitespace-pre-wrap">${msg}</pre>`;
+      document.querySelector('.max-w-7xl').prepend(box);
+      console.warn(msg);
+    }
+  </script>
 </body>
 </html>
