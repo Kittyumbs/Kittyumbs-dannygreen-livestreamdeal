@@ -54,7 +54,7 @@
     <div id="sections" class="space-y-6"></div>
 
     <footer class="mt-10 text-xs text-slate-500">
-      Made for DannyGreen & Nhân Hòa • v2 (Excel-driven)
+      Made for DannyGreen & Nhân Hòa • v2.1 (Excel-driven)
     </footer>
   </div>
 
@@ -94,7 +94,7 @@
       { key: 'hangtuuuhco', label: 'Mục 5: CHƯƠNG TRÌNH HÀNG TƯƠI HỮU CƠ', sheet: 'HANG_TUOI_HUU_CO' },
     ];
 
-    const CANDIDATE_PATHS = [ 'deals.xlsx', './deals.xlsx', '/deals.xlsx' ];
+    const CANDIDATE_PATHS = [ '/deals.xlsx', './deals.xlsx', 'deals.xlsx' ];
 
     // ---- State (không LocalStorage) ----
     let state = {
@@ -162,10 +162,12 @@
     // ---- Excel Loader ----
     async function loadFromUrlOnce(path) {
       const url = path + (path.includes('?') ? '' : `?t=${Date.now()}`);
-      const res = await fetch(url);
+      console.log('[fetch] trying:', url);
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status + ' at ' + path);
       const buf = await res.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array' });
+      console.log('[fetch] success:', path, 'sheets:', wb.SheetNames);
       applyWorkbook(wb);
     }
 
@@ -175,8 +177,10 @@
         try { await loadFromUrlOnce(p); return; }
         catch (e) { lastErr = e; }
       }
-      showError("Không tìm thấy 'deals.xlsx' ở cùng thư mục hoặc cùng origin.
-Hãy đảm bảo file được host cạnh 'index.html' (GitHub Pages/Vercel).
+      showError("Không tìm thấy 'deals.xlsx'.
+• Nếu deploy trên Vercel/Next.js: đặt file vào thư mục PUBLIC và truy cập qua /deals.xlsx.
+• Nếu static (Other): vẫn nên đặt vào /public.
+• Kiểm tra trực tiếp URL: /deals.xlsx
 Chi tiết: " + (lastErr && lastErr.message ? lastErr.message : ''));
     }
 
